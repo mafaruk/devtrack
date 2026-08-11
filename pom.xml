@@ -47,7 +47,6 @@
         <scope>test</scope>
     </dependency>
 
-    <!-- Add back on Day 2 (entities + Postgres):
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -62,9 +61,7 @@
         <artifactId>spring-boot-starter-data-jpa-test</artifactId>
         <scope>test</scope>
     </dependency>
-    -->
-
-    <!-- Add back on Day 3 (Spring Security + JWT):
+   
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-security</artifactId>
@@ -74,7 +71,24 @@
         <artifactId>spring-boot-starter-security-test</artifactId>
         <scope>test</scope>
     </dependency>
-    -->
+	<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.12.6</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+   
 
     <!-- Add back on Day 3-4 (request validation):
     <dependency>
