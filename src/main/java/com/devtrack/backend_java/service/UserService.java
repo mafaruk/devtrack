@@ -3,10 +3,13 @@ package com.devtrack.backend_java.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.devtrack.backend_java.dto.UserResponse;
 import com.devtrack.backend_java.dto.project.ProjectResponse;
+import com.devtrack.backend_java.entity.User;
+import com.devtrack.backend_java.exception.ResourceNotFoundException;
 import com.devtrack.backend_java.repository.UserRepository;
 
 @Service
@@ -32,6 +35,17 @@ public class UserService {
                         project.getProjectStatus()))
                 .collect(Collectors.toList()), null, user.getRole()))
         .collect(Collectors.toList());
+    }
+
+    @Cacheable(value = "users", key="#userName")
+    public UserResponse getUserByUsername(String userName){
+        User user = userRepository.findByUserName(userName).orElseThrow(()->new ResourceNotFoundException(userName + " Username not fount"));
+        return new UserResponse(user.getId(), user.getUserName(), user.getEmail(), user.getProjects().stream().map(project -> new ProjectResponse(
+                        project.getId(),
+                        project.getName(),
+                        project.getOwner().getUserName(),
+                        project.getTaskCount(),
+                        project.getProjectStatus())).collect(Collectors.toList()), null, user.getRole());
     }
 
     

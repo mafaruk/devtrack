@@ -16,6 +16,8 @@ import com.devtrack.backend_java.dto.auth.RegisterRequest;
 import com.devtrack.backend_java.entity.User;
 import com.devtrack.backend_java.service.auth.AuthService;
 
+import jakarta.validation.Valid;
+
 @RestController
 public class AuthController {
 
@@ -28,32 +30,30 @@ public class AuthController {
     }
 
     @PostMapping("/api/auth/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest entity) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest entity) {
         User user = new User();
         user.setEmail(entity.email());
         user.setUserName(entity.userName());
         user.setPasswordHash(passwordEncoder.encode(entity.password()));
         user.setRole(entity.role());
         AuthResponse authResponse = authService.register(user);
-        if (authResponse.error() != null) {
-            return ResponseEntity.status(401).body(authResponse);
-        }
         return ResponseEntity.ok(authResponse);
 
     }
 
     @PostMapping("/api/auth/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest entity) {
-        User user = new User();
-        user.setEmail(entity.email());
-        user.setPasswordHash(entity.password());
-        AuthResponse authResponse = authService.login(user);
-
-        if (authResponse.error() != null) {
-            return ResponseEntity.status(401).body(authResponse);
+    public ResponseEntity<?> login( @RequestBody LoginRequest entity) {
+        try {
+            User user = new User();
+            //TODO: login with user name 
+            user.setEmail(entity.email());
+            user.setPasswordHash(entity.password());
+            AuthResponse authResponse = authService.login(user);
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
         }
 
-        return ResponseEntity.ok(authResponse);
     }
 
     @GetMapping("/api/me")

@@ -3,16 +3,19 @@ package com.devtrack.backend_java.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.devtrack.backend_java.dto.task.TaskRequest;
 import com.devtrack.backend_java.dto.task.TaskResponse;
 import com.devtrack.backend_java.entity.Project;
 import com.devtrack.backend_java.entity.Task;
 import com.devtrack.backend_java.entity.User;
+import com.devtrack.backend_java.exception.ResourceNotFoundException;
 import com.devtrack.backend_java.repository.ProjectRepository;
 import com.devtrack.backend_java.repository.TaskRepository;
 import com.devtrack.backend_java.repository.UserRepository;
@@ -35,6 +38,10 @@ public class TaskService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "projects", key = "#request.project_id"),
+            @CacheEvict(value = "users", key = "#request.userName()")
+    })
     public TaskResponse saveTask(TaskRequest request) {
         if (!StringUtils.hasText(request.name())) {
             throw new IllegalArgumentException("Task name is required");
@@ -47,13 +54,13 @@ public class TaskService {
         if (StringUtils.hasText(request.userName())) {
 
             User assignee = userRepository.findByUserName(request.userName())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    .orElseThrow(() -> new ResourceNotFoundException(HttpStatus.NOT_FOUND,
                             "User " + request.userName() + " not found"));
             task.setAssignee(assignee);
         }
 
         Project project = projectRepository.findById(request.project_id())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                .orElseThrow(() -> new ResourceNotFoundException(HttpStatus.NOT_FOUND,
                         "Project " + request.project_id() + " not found"));
 
         task.setName(request.name());
@@ -63,11 +70,12 @@ public class TaskService {
         task = taskRepository.save(task);
 
         var taskCount = taskRepository.findByProject(project).stream().count();
-        project.setTaskCount((int)taskCount);
+        project.setTaskCount((int) taskCount);
         projectRepository.save(project);
 
         TaskResponse taskResponse = new TaskResponse(task.getId(), task.getName(),
-                 task.getProject().getName(), task.getAssignee()!=null ? task.getAssignee().getUserName() : null, task.getTaskStatus());
+                task.getProject().getName(), task.getAssignee() != null ? task.getAssignee().getUserName() : null,
+                task.getTaskStatus());
 
         return taskResponse;
     }
@@ -77,21 +85,33 @@ public class TaskService {
                 task.getId(),
                 task.getName(),
                 task.getProject().getName(),
-                task.getAssignee()!=null ? task.getAssignee().getUserName() : null,
+                task.getAssignee() != null ? task.getAssignee().getUserName() : null,
                 task.getTaskStatus())).collect(Collectors.toList());
     }
 
     @Transactional
+    @CacheEvict(value = "tasks", key = "#taskId")
     public TaskResponse assignTaskandNotify(Long taskId, String userName, String taskStatus) {
         User user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                .orElseThrow(() -> new ResourceNotFoundException(HttpStatus.NOT_FOUND,
                         "Owner " + userName + " not found"));
-        Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Task not found"));
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException(HttpStatus.NOT_FOUND,
+                        "Task not found"));
 
         task.setAssignee(user);
         task.setTaskStatus(TaskStatus.valueOf(taskStatus));
         taskRepository.save(task);
+
+        return new TaskResponse(task.getId(), task.getName(), task.getProject().getName(),
+                task.getAssignee().getUserName(), task.getTaskStatus());
+    }
+
+    @Cacheable(value = "tasks", key = "#taskId")
+    public TaskResponse getTaskById(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException(HttpStatus.NOT_FOUND,
+                        "Task not found"));
 
         return new TaskResponse(task.getId(), task.getName(), task.getProject().getName(),
                 task.getAssignee().getUserName(), task.getTaskStatus());
